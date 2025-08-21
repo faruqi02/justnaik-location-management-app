@@ -1,17 +1,11 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { logoutUser, clearSessionExpired } from "../store/authSlice";
-import { useNavigate } from "react-router-dom";
+import { clearSessionExpired } from "../store/authSlice";
 
 function Navbar({ toggleSidebar }) {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { user, token, sessionExpired } = useSelector((state) => state.auth);
 
-  const handleLogout = () => {
-    dispatch(logoutUser());
-    navigate("/login");
-  };
 
   // ✅ Auto-hide session expired alert after 5s
   useEffect(() => {
@@ -57,12 +51,6 @@ function Navbar({ toggleSidebar }) {
           {token && (
             <div>
               <span className="me-3">Welcome, {user?.fullName || "User"}</span>
-              <button
-                className="btn btn-outline-danger btn-sm"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
             </div>
           )}
         </div>

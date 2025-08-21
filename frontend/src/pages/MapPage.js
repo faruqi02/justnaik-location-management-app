@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchLocations, addLocation } from "../store/locationsSlice";
-import {
-  MapContainer,
-  Marker,
-  Popup,
-  useMap,
-} from "react-leaflet";
+import { MapContainer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
@@ -59,14 +54,14 @@ function LocationListControl({ locations, onLocate }) {
         <thead><tr><th>Name</th><th>Go</th></tr></thead>
         <tbody>
           ${locations
-            .map(
-              (loc) => `
+          .map(
+            (loc) => `
             <tr>
               <td>${loc.name}</td>
               <td><button class="btn btn-sm btn-primary locate-btn" data-lat="${loc.lat}" data-lng="${loc.lng}">Go</button></td>
             </tr>`
-            )
-            .join("")}
+          )
+          .join("")}
         </tbody>
       `;
       listDiv.appendChild(table);
@@ -91,65 +86,6 @@ function LocationListControl({ locations, onLocate }) {
 
     return () => customControl.remove();
   }, [map, open, locations, onLocate]);
-
-  return null;
-}
-
-// Add location control
-function AddLocationControl({ onAdd }) {
-  const map = useMap();
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", lat: "", lng: "" });
-
-  useEffect(() => {
-    const controlDiv = L.DomUtil.create("div", "leaflet-bar");
-    const button = L.DomUtil.create("a", "", controlDiv);
-    button.innerHTML = open ? "−" : "+";
-    button.title = open ? "Hide Add Form" : "Show Add Form";
-    button.href = "#";
-
-    const formDiv = L.DomUtil.create("div", "", controlDiv);
-    formDiv.style.display = open ? "block" : "none";
-    formDiv.style.background = "white";
-    formDiv.style.padding = "8px";
-    formDiv.style.width = "180px";
-    formDiv.style.borderRadius = "4px";
-
-    if (open) {
-      const formEl = document.createElement("form");
-      formEl.innerHTML = `
-        <input type="text" name="name" placeholder="Name" class="form-control form-control-sm mb-2" />
-        <input type="text" name="lat" placeholder="Latitude" class="form-control form-control-sm mb-2" />
-        <input type="text" name="lng" placeholder="Longitude" class="form-control form-control-sm mb-2" />
-        <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
-      `;
-      formDiv.appendChild(formEl);
-
-      formEl.addEventListener("input", (e) => {
-        setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-      });
-
-      formEl.addEventListener("submit", (e) => {
-        e.preventDefault();
-        if (!form.name || !form.lat || !form.lng) return;
-        onAdd(form);
-        setForm({ name: "", lat: "", lng: "" });
-        formEl.reset();
-        setOpen(false);
-      });
-    }
-
-    button.onclick = (e) => {
-      e.preventDefault();
-      setOpen(!open);
-    };
-
-    const customControl = L.control({ position: "topleft" });
-    customControl.onAdd = () => controlDiv;
-    customControl.addTo(map);
-
-    return () => customControl.remove();
-  }, [map, open, form, onAdd]);
 
   return null;
 }
@@ -191,34 +127,88 @@ function LocateMeControl({ onLocate }) {
   return null;
 }
 
-// Layer switcher control (Street/Satellite)
+// Layer switcher control
 function LayerSwitcherControl() {
   const map = useMap();
   useEffect(() => {
-    const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+    const street = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    );
     const satellite = L.tileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
     );
 
-    // default or last selected
-    const lastLayer = localStorage.getItem("mapLayer") || "Street";
-    if (lastLayer === "Street") street.addTo(map);
-    else satellite.addTo(map);
-
-    const layersControl = L.control.layers(
+    street.addTo(map);
+    L.control.layers(
       { Street: street, Satellite: satellite },
       {},
       { position: "topright" }
     ).addTo(map);
-
-    map.on("baselayerchange", (e) => {
-      localStorage.setItem("mapLayer", e.name);
-    });
-
-    return () => layersControl.remove();
   }, [map]);
-
   return null;
+}
+
+// ... (imports and setup remain the same)
+
+function AddLocationForm({ onAdd, onFlyTo }) {
+  const [form, setForm] = useState({ name: "", lat: "", lng: "" });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.name || !form.lat || !form.lng) return;
+
+    const newLocation = {
+      id: Date.now(), // temporary id for local display
+      name: form.name,
+      lat: parseFloat(form.lat),
+      lng: parseFloat(form.lng),
+    };
+
+    onAdd(newLocation);    // dispatch to Redux
+    onFlyTo(newLocation);  // fly to the new location
+
+    setForm({ name: "", lat: "", lng: "" });
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        display: "flex",
+        gap: "10px",
+        padding: "10px",
+        background: "#f5f5f5",
+        alignItems: "center",
+      }}
+    >
+      <input
+        type="text"
+        placeholder="Location Name"
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+        className="form-control"
+      />
+      <input
+        type="number"
+        step="any"
+        placeholder="Latitude"
+        value={form.lat}
+        onChange={(e) => setForm({ ...form, lat: e.target.value })}
+        className="form-control"
+      />
+      <input
+        type="number"
+        step="any"
+        placeholder="Longitude"
+        value={form.lng}
+        onChange={(e) => setForm({ ...form, lng: e.target.value })}
+        className="form-control"
+      />
+      <button type="submit" className="btn btn-primary">
+        Add
+      </button>
+    </form>
+  );
 }
 
 function MapPage() {
@@ -230,7 +220,6 @@ function MapPage() {
   useEffect(() => {
     dispatch(fetchLocations());
 
-    // always get current location (for display only)
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -244,42 +233,52 @@ function MapPage() {
     }
   }, [dispatch]);
 
+  const handleAddLocation = (loc) => {
+    dispatch(addLocation(loc)); // save to DB or Redux store
+  };
+
+  const handleFlyTo = (loc) => {
+    setFlyTo({ lat: loc.lat, lng: loc.lng });
+  };
+
   return (
-    <div style={{ height: "100vh", width: "100%" }}>
-      <MapContainer
-        center={[3.139, 101.6869]}
-        zoom={12}
-        style={{ height: "100%", width: "100%" }}
-        whenCreated={(map) => {
-          if (locations.length > 0) {
-            const bounds = L.latLngBounds(locations.map((loc) => [loc.lat, loc.lng]));
-            map.fitBounds(bounds, { padding: [50, 50] });
-          } else if (currentLocation) {
-            map.setView([currentLocation.lat, currentLocation.lng], 12);
-          }
-        }}
-      >
-        <LayerSwitcherControl />
+    <div style={{ height: "calc(100vh - 60px)", width: "100%" }}>
+      {/* Always visible form */}
+      <AddLocationForm onAdd={handleAddLocation} onFlyTo={handleFlyTo} />
+        <MapContainer
+          center={[3.139, 101.6869]}
+          zoom={12}
+          style={{ height: "calc(100% - 70px)", width: "100%" }}
+          whenCreated={(map) => {
+            if (locations.length > 0) {
+              const bounds = L.latLngBounds(
+                locations.map((loc) => [loc.lat, loc.lng])
+              );
+              map.fitBounds(bounds, { padding: [50, 50] });
+            }
+          }}
+        >
+          <LayerSwitcherControl />
 
-        {locations.map((loc) => (
-          <Marker key={loc.id} position={[loc.lat, loc.lng]}>
-            <Popup>{loc.name}</Popup>
-          </Marker>
-        ))}
+          {locations.map((loc) => (
+            <Marker key={loc.id} position={[loc.lat, loc.lng]}>
+              <Popup>{loc.name}</Popup>
+            </Marker>
+          ))}
 
-        {currentLocation && (
-          <Marker position={[currentLocation.lat, currentLocation.lng]}>
-            <Popup>📍Your Location</Popup>
-          </Marker>
-        )}
+          {currentLocation && (
+            <Marker position={[currentLocation.lat, currentLocation.lng]}>
+              <Popup>📍Your Location</Popup>
+            </Marker>
+          )}
 
-        {flyTo && <FlyToLocation lat={flyTo.lat} lng={flyTo.lng} />}
-        <LocationListControl locations={locations} onLocate={setFlyTo} />
-        <AddLocationControl onAdd={(form) => dispatch(addLocation(form))} />
-        <LocateMeControl onLocate={setFlyTo} />
-      </MapContainer>
+          {flyTo && <FlyToLocation lat={flyTo.lat} lng={flyTo.lng} />}
+          <LocationListControl locations={locations} onLocate={handleFlyTo} />
+          <LocateMeControl onLocate={handleFlyTo} />
+        </MapContainer>
     </div>
   );
 }
 
 export default MapPage;
+

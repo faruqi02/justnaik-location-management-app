@@ -1,8 +1,16 @@
 import { Link } from "react-router-dom";
-import { useSelector } from "react-redux";
-
+import { useDispatch,useSelector } from "react-redux";
+import { logoutUser, clearSessionExpired } from "../store/authSlice";
+import { useNavigate } from "react-router-dom";
 function Sidebar({ isOpen, toggle }) {
+    const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { token } = useSelector((state) => state.auth);
+
+  const handleLogout = () => {
+    dispatch(logoutUser());
+    navigate("/login");
+  };
 
   return (
     <div
@@ -26,53 +34,62 @@ function Sidebar({ isOpen, toggle }) {
 
         </button>
       </div>
-<ul className="list-unstyled p-3">
-  {!token && (
-    <>
-      <li className="mb-2">
-        <Link
-          to="/login"
-          onClick={toggle}
-          className="text-decoration-none d-block py-2 px-3 rounded hover-link"
-        >
-          🔑 Login
-        </Link>
-      </li>
-      <li className="mb-2">
-        <Link
-          to="/register"
-          onClick={toggle}
-          className="text-decoration-none d-block py-2 px-3 rounded hover-link"
-        >
-          📝 Register
-        </Link>
-      </li>
-    </>
-  )}
+      <ul className="list-unstyled p-3">
+        {!token && (
+          <>
+            <li className="mb-2">
+              <Link
+                to="/login"
+                onClick={toggle}
+                className="text-decoration-none d-block py-2 px-3 rounded hover-link"
+              >
+                🔑 Login
+              </Link>
+            </li>
+            <li className="mb-2">
+              <Link
+                to="/register"
+                onClick={toggle}
+                className="text-decoration-none d-block py-2 px-3 rounded hover-link"
+              >
+                📝 Register
+              </Link>
+            </li>
+          </>
+        )}
 
-  {token && (
-    <>
-      <li className="mb-2">
-        <Link
-          to="/map"
-          onClick={toggle}
-          className="text-decoration-none d-block py-2 px-3 rounded hover-link"
-        >
-          🗺 Map
-        </Link>
-      </li>
-      <li className="mb-2">
-        <Link
-          to="/upload"
-          onClick={toggle}
-          className="text-decoration-none d-block py-2 px-3 rounded hover-link"
-        >
-          ⬆️ Upload
-        </Link>
-      </li>
-    </>
-  )}
-</ul>
+        {token && (
+          <>
+            <li className="mb-2">
+              <Link
+                to="/map"
+                onClick={toggle}
+                className="text-decoration-none d-block py-2 px-3 rounded hover-link"
+              >
+                🗺 Map
+              </Link>
+            </li>
+            <li className="mb-2">
+              <Link
+                to="/upload"
+                onClick={toggle}
+                className="text-decoration-none d-block py-2 px-3 rounded hover-link"
+              >
+                ⬆️ Upload
+              </Link>
+            </li>
+            <li className="mb-2">
+              <button
+                className="btn btn-outline-danger btn-sm"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
+            </li>
+
+          </>
+        )}
+      </ul>
 
     </div>
   );

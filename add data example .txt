@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Petronas Twin Towers",
+    "lat": 3.15785,
+    "lng": 101.7123
+  },
+  {
+    "id": 2,
+    "name": "KL Tower",
+    "lat": 3.1528,
+    "lng": 101.7031
+  },
+  {
+    "id": 3,
+    "name": "Bukit Bintang",
+    "lat": 3.1458,
+    "lng": 101.7103
+  },
+  {
+    "id": 4,
+    "name": "KL Sentral",
+    "lat": 3.1338,
+    "lng": 101.6865
+  }
+]

@@ -37,3 +37,19 @@
   }
 }
 
+.hover-link {
+  color: #333;
+  transition: background 0.2s, color 0.2s;
+}
+
+.hover-link:hover {
+  background: #f0f0f0;
+  color: #007bff;
+}
+
+.hover-link.active {
+  background: #007bff;
+  color: white !important;
+}
+
+

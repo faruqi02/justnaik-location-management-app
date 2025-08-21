@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../store/authSlice";
 import { useNavigate } from "react-router-dom";
 
-function Navbar() {
+function Navbar({ toggleSidebar }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user, token } = useSelector((state) => state.auth);
@@ -13,33 +13,38 @@ function Navbar() {
     navigate("/login");
   };
 
-  if (!token) return null; // Hide navbar if not logged in
+  //if (!token) return null;
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white border-bottom px-4">
-      <div className="container-fluid d-flex justify-content-between">
-        {/* Burger button triggers offcanvas */}
+    <nav className="navbar navbar-light bg-white border-bottom px-4">
+      <div className="container-fluid d-flex justify-content-between align-items-center">
+        {/* Unicode Hamburger ☰ */}
         <button
-          className="btn d-lg-none"
-          type="button"
-          data-bs-toggle="offcanvas"
-          data-bs-target="#sidebarMenu"
-          aria-controls="sidebarMenu"
+          className="btn btn-light"
+          onClick={toggleSidebar}
+          style={{ fontSize: "1.5rem" }}
         >
-          <i className="bi bi-list fs-3"></i>
+          ☰
         </button>
 
-        <span className="navbar-brand">Location Management System</span>
-
-        <div>
-          <span className="me-3">Welcome, {user?.fullName || "User"}</span>
-          <button
-            className="btn btn-outline-danger btn-sm"
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
+        {/* Center: Brand (always centered) */}
+        <div className="flex-grow-1 d-flex justify-content-center">
+          <span className="navbar-brand mb-0 h1">
+            Location Management System
+          </span>
         </div>
+
+        {token && (
+          <div>
+            <span className="me-3">Welcome, {user?.fullName || "User"}</span>
+            <button
+              className="btn btn-outline-danger btn-sm"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );

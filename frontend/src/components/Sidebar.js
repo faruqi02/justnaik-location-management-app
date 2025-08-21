@@ -1,58 +1,79 @@
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 
-function Sidebar() {
+function Sidebar({ isOpen, toggle }) {
   const { token } = useSelector((state) => state.auth);
 
   return (
     <div
-      className="offcanvas offcanvas-start bg-light"
-      tabIndex="-1"
-      id="sidebarMenu"
-      aria-labelledby="sidebarMenuLabel"
+      className="bg-light border-end vh-100 position-fixed"
+      style={{
+        width: "200px",
+        top: 0,
+        left: isOpen ? "0" : "-200px",
+        transition: "left 0.3s ease",
+        zIndex: 1040,
+      }}
     >
-      <div className="offcanvas-header">
-        <h5 id="sidebarMenuLabel">Menu</h5>
+      <div className="d-flex justify-content-between align-items-center p-3 border-bottom">
+        <h5 className="mb-0">Menu</h5>
+        {/* Unicode Close × */}
         <button
-          type="button"
-          className="btn-close text-reset"
-          data-bs-dismiss="offcanvas"
-          aria-label="Close"
-        ></button>
-      </div>
-      <div className="offcanvas-body">
-        <ul className="list-unstyled">
-          {!token && (
-            <>
-              <li>
-                <Link to="/login" data-bs-dismiss="offcanvas">
-                  Login
-                </Link>
-              </li>
-              <li>
-                <Link to="/register" data-bs-dismiss="offcanvas">
-                  Register
-                </Link>
-              </li>
-            </>
-          )}
+          className=" btn-close"
+          onClick={toggle}
+          style={{ fontSize: "1.2rem" }}
+        >
 
-          {token && (
-            <>
-              <li>
-                <Link to="/map" data-bs-dismiss="offcanvas">
-                  Map
-                </Link>
-              </li>
-              <li>
-                <Link to="/upload" data-bs-dismiss="offcanvas">
-                  Upload
-                </Link>
-              </li>
-            </>
-          )}
-        </ul>
+        </button>
       </div>
+<ul className="list-unstyled p-3">
+  {!token && (
+    <>
+      <li className="mb-2">
+        <Link
+          to="/login"
+          onClick={toggle}
+          className="text-decoration-none d-block py-2 px-3 rounded hover-link"
+        >
+          🔑 Login
+        </Link>
+      </li>
+      <li className="mb-2">
+        <Link
+          to="/register"
+          onClick={toggle}
+          className="text-decoration-none d-block py-2 px-3 rounded hover-link"
+        >
+          📝 Register
+        </Link>
+      </li>
+    </>
+  )}
+
+  {token && (
+    <>
+      <li className="mb-2">
+        <Link
+          to="/map"
+          onClick={toggle}
+          className="text-decoration-none d-block py-2 px-3 rounded hover-link"
+        >
+          🗺 Map
+        </Link>
+      </li>
+      <li className="mb-2">
+        <Link
+          to="/upload"
+          onClick={toggle}
+          className="text-decoration-none d-block py-2 px-3 rounded hover-link"
+        >
+          ⬆️ Upload
+        </Link>
+      </li>
+    </>
+  )}
+</ul>
+
     </div>
   );
 }

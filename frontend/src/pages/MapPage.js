@@ -22,7 +22,7 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-// ✅ Fly to map location
+// ✅ Fly to a given location
 function FlyToLocation({ lat, lng }) {
   const map = useMap();
   useEffect(() => {
@@ -33,7 +33,7 @@ function FlyToLocation({ lat, lng }) {
   return null;
 }
 
-// ✅ Custom Control inside map
+// ✅ Collapsible Location List Control
 function LocationListControl({ locations, onLocate }) {
   const map = useMap();
   const [open, setOpen] = useState(false);
@@ -41,7 +41,6 @@ function LocationListControl({ locations, onLocate }) {
   useEffect(() => {
     const controlDiv = L.DomUtil.create("div", "leaflet-bar");
 
-    // Header toggle
     const button = L.DomUtil.create("a", "", controlDiv);
     button.innerHTML = open ? "▲" : "▼";
     button.title = open ? "Hide Locations" : "Show Locations";
@@ -84,7 +83,7 @@ function LocationListControl({ locations, onLocate }) {
       });
     }
 
-    // Toggle collapse
+    // Toggle button
     button.onclick = (e) => {
       e.preventDefault();
       setOpen(!open);
@@ -102,77 +101,83 @@ function LocationListControl({ locations, onLocate }) {
   return null;
 }
 
+// ✅ Collapsible Add Location Form Control
+function AddLocationControl({ onAdd }) {
+  const map = useMap();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", lat: "", lng: "" });
+
+  useEffect(() => {
+    const controlDiv = L.DomUtil.create("div", "leaflet-bar");
+
+    const button = L.DomUtil.create("a", "", controlDiv);
+    button.innerHTML = open ? "−" : "+";
+    button.title = open ? "Hide Add Form" : "Show Add Form";
+    button.href = "#";
+
+    const formDiv = L.DomUtil.create("div", "", controlDiv);
+    formDiv.style.display = open ? "block" : "none";
+    formDiv.style.background = "white";
+    formDiv.style.padding = "8px";
+    formDiv.style.width = "180px";
+    formDiv.style.borderRadius = "4px";
+
+    if (open) {
+      const formEl = document.createElement("form");
+      formEl.innerHTML = `
+        <input type="text" name="name" placeholder="Name" class="form-control form-control-sm mb-2" />
+        <input type="text" name="lat" placeholder="Latitude" class="form-control form-control-sm mb-2" />
+        <input type="text" name="lng" placeholder="Longitude" class="form-control form-control-sm mb-2" />
+        <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
+      `;
+      formDiv.appendChild(formEl);
+
+      // Input changes
+      formEl.addEventListener("input", (e) => {
+        setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+      });
+
+      // Submit
+      formEl.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (!form.name || !form.lat || !form.lng) return;
+        onAdd(form);
+        setForm({ name: "", lat: "", lng: "" });
+        formEl.reset();
+        setOpen(false); // auto-close after add
+      });
+    }
+
+    button.onclick = (e) => {
+      e.preventDefault();
+      setOpen(!open);
+    };
+
+    const customControl = L.control({ position: "topleft" });
+    customControl.onAdd = () => controlDiv;
+    customControl.addTo(map);
+
+    return () => {
+      customControl.remove();
+    };
+  }, [map, open, form, onAdd]);
+
+  return null;
+}
+
 function MapPage() {
   const dispatch = useDispatch();
   const { items: locations } = useSelector((state) => state.locations);
   const [flyTo, setFlyTo] = useState(null);
 
-  // form state
-  const [form, setForm] = useState({ name: "", lat: "", lng: "" });
-
   useEffect(() => {
     dispatch(fetchLocations());
   }, [dispatch]);
 
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!form.name || !form.lat || !form.lng) return;
-    dispatch(addLocation(form));
-    setForm({ name: "", lat: "", lng: "" });
-  };
-
   return (
-    <div style={{ height: "100vh", width: "100%", position: "relative" }}>
-      {/* ✅ Add Location Form Overlay */}
-      <div
-        style={{
-          position: "absolute",
-          top: "10px",
-          right: "10px",
-          background: "white",
-          padding: "10px",
-          borderRadius: "6px",
-          zIndex: 1000,
-          boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-        }}
-      >
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            value={form.name}
-            onChange={handleChange}
-            className="form-control mb-2"
-          />
-          <input
-            type="text"
-            name="lat"
-            placeholder="Latitude"
-            value={form.lat}
-            onChange={handleChange}
-            className="form-control mb-2"
-          />
-          <input
-            type="text"
-            name="lng"
-            placeholder="Longitude"
-            value={form.lng}
-            onChange={handleChange}
-            className="form-control mb-2"
-          />
-          <button type="submit" className="btn btn-primary w-100">
-            Add
-          </button>
-        </form>
-      </div>
-
-      {/* ✅ Map */}
+    <div style={{ height: "100vh", width: "100%" }}>
       <MapContainer
-        center={[3.139, 101.6869]} // KL
+        center={[3.139, 101.6869]} // Kuala Lumpur
         zoom={12}
         style={{ height: "100%", width: "100%" }}
       >
@@ -186,8 +191,9 @@ function MapPage() {
 
         {flyTo && <FlyToLocation lat={flyTo.lat} lng={flyTo.lng} />}
 
-        {/* ✅ Collapsible list inside map */}
+        {/* ✅ Controls inside map */}
         <LocationListControl locations={locations} onLocate={setFlyTo} />
+        <AddLocationControl onAdd={(form) => dispatch(addLocation(form))} />
       </MapContainer>
     </div>
   );

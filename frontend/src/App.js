@@ -1,14 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Map from "./pages/MapPage";
 import Upload from "./pages/Upload";
-import Layout from "./components/Layout";
+import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
 import { useSelector } from "react-redux";
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
-import "bootstrap-icons/font/bootstrap-icons.css";
-
+import "bootstrap/dist/css/bootstrap.min.css";
+import "./App.css";
 // PrivateRoute wrapper
 function PrivateRoute({ children }) {
   const { token } = useSelector((state) => state.auth);
@@ -22,38 +22,28 @@ function PublicRoute({ children }) {
 }
 
 function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
   return (
     <Router>
-      <Routes>
-        {/* Public routes (no Layout) */}
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+      <div className="d-flex">
+        {/* Sidebar */}
+        <Sidebar isOpen={sidebarOpen} toggle={() => setSidebarOpen(!sidebarOpen)} />
 
-        {/* Private routes (with Layout) */}
-        <Route
-          path="/map"
-          element={
-            <PrivateRoute>
-              <Layout>
-                <Map />
-              </Layout>
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/upload"
-          element={
-            <PrivateRoute>
-              <Layout>
-                <Upload />
-              </Layout>
-            </PrivateRoute>
-          }
-        />
-
-        {/* Default redirect */}
-        <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
+        {/* Main content */}
+        <div className="flex-grow-1">
+          <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+          <div className="p-4">
+            <Routes>
+              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+              <Route path="/map" element={<PrivateRoute><Map /></PrivateRoute>} />
+              <Route path="/upload" element={<PrivateRoute><Upload /></PrivateRoute>} />
+              <Route path="*" element={<Navigate to="/login" />} />
+            </Routes>
+          </div>
+        </div>
+      </div>
     </Router>
   );
 }

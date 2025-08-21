@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchLocations, addLocation } from "../store/locationsSlice";
 import {
   MapContainer,
-  TileLayer,
   Marker,
   Popup,
   useMap,
@@ -11,7 +10,7 @@ import {
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Fix marker icons
+// Fix default marker icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -22,7 +21,7 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-// ✅ Fly to a given location
+// Fly to a given location
 function FlyToLocation({ lat, lng }) {
   const map = useMap();
   useEffect(() => {
@@ -33,14 +32,13 @@ function FlyToLocation({ lat, lng }) {
   return null;
 }
 
-// ✅ Collapsible Location List Control
+// Location list control
 function LocationListControl({ locations, onLocate }) {
   const map = useMap();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const controlDiv = L.DomUtil.create("div", "leaflet-bar");
-
     const button = L.DomUtil.create("a", "", controlDiv);
     button.innerHTML = open ? "▲" : "▼";
     button.title = open ? "Hide Locations" : "Show Locations";
@@ -73,7 +71,6 @@ function LocationListControl({ locations, onLocate }) {
       `;
       listDiv.appendChild(table);
 
-      // Attach click events
       table.querySelectorAll(".locate-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const lat = parseFloat(e.target.dataset.lat);
@@ -83,7 +80,6 @@ function LocationListControl({ locations, onLocate }) {
       });
     }
 
-    // Toggle button
     button.onclick = (e) => {
       e.preventDefault();
       setOpen(!open);
@@ -93,15 +89,13 @@ function LocationListControl({ locations, onLocate }) {
     customControl.onAdd = () => controlDiv;
     customControl.addTo(map);
 
-    return () => {
-      customControl.remove();
-    };
+    return () => customControl.remove();
   }, [map, open, locations, onLocate]);
 
   return null;
 }
 
-// ✅ Collapsible Add Location Form Control
+// Add location control
 function AddLocationControl({ onAdd }) {
   const map = useMap();
   const [open, setOpen] = useState(false);
@@ -109,7 +103,6 @@ function AddLocationControl({ onAdd }) {
 
   useEffect(() => {
     const controlDiv = L.DomUtil.create("div", "leaflet-bar");
-
     const button = L.DomUtil.create("a", "", controlDiv);
     button.innerHTML = open ? "−" : "+";
     button.title = open ? "Hide Add Form" : "Show Add Form";
@@ -132,19 +125,17 @@ function AddLocationControl({ onAdd }) {
       `;
       formDiv.appendChild(formEl);
 
-      // Input changes
       formEl.addEventListener("input", (e) => {
         setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
       });
 
-      // Submit
       formEl.addEventListener("submit", (e) => {
         e.preventDefault();
         if (!form.name || !form.lat || !form.lng) return;
         onAdd(form);
         setForm({ name: "", lat: "", lng: "" });
         formEl.reset();
-        setOpen(false); // auto-close after add
+        setOpen(false);
       });
     }
 
@@ -157,10 +148,75 @@ function AddLocationControl({ onAdd }) {
     customControl.onAdd = () => controlDiv;
     customControl.addTo(map);
 
-    return () => {
-      customControl.remove();
-    };
+    return () => customControl.remove();
   }, [map, open, form, onAdd]);
+
+  return null;
+}
+
+// Locate me control
+function LocateMeControl({ onLocate }) {
+  const map = useMap();
+  useEffect(() => {
+    const controlDiv = L.DomUtil.create("div", "leaflet-bar");
+    const button = L.DomUtil.create("a", "", controlDiv);
+    button.innerHTML = "📍";
+    button.title = "Locate Me";
+    button.href = "#";
+
+    button.onclick = (e) => {
+      e.preventDefault();
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            onLocate({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            });
+          },
+          () => alert("Unable to get your location")
+        );
+      } else {
+        alert("Geolocation not supported");
+      }
+    };
+
+    const customControl = L.control({ position: "topleft" });
+    customControl.onAdd = () => controlDiv;
+    customControl.addTo(map);
+
+    return () => customControl.remove();
+  }, [onLocate]);
+
+  return null;
+}
+
+// Layer switcher control (Street/Satellite)
+function LayerSwitcherControl() {
+  const map = useMap();
+  useEffect(() => {
+    const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+    const satellite = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    );
+
+    // default or last selected
+    const lastLayer = localStorage.getItem("mapLayer") || "Street";
+    if (lastLayer === "Street") street.addTo(map);
+    else satellite.addTo(map);
+
+    const layersControl = L.control.layers(
+      { Street: street, Satellite: satellite },
+      {},
+      { position: "topright" }
+    ).addTo(map);
+
+    map.on("baselayerchange", (e) => {
+      localStorage.setItem("mapLayer", e.name);
+    });
+
+    return () => layersControl.remove();
+  }, [map]);
 
   return null;
 }
@@ -169,19 +225,41 @@ function MapPage() {
   const dispatch = useDispatch();
   const { items: locations } = useSelector((state) => state.locations);
   const [flyTo, setFlyTo] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(null);
 
   useEffect(() => {
     dispatch(fetchLocations());
+
+    // always get current location (for display only)
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCurrentLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+        },
+        () => setCurrentLocation(null)
+      );
+    }
   }, [dispatch]);
 
   return (
     <div style={{ height: "100vh", width: "100%" }}>
       <MapContainer
-        center={[3.139, 101.6869]} // Kuala Lumpur
+        center={[3.139, 101.6869]}
         zoom={12}
         style={{ height: "100%", width: "100%" }}
+        whenCreated={(map) => {
+          if (locations.length > 0) {
+            const bounds = L.latLngBounds(locations.map((loc) => [loc.lat, loc.lng]));
+            map.fitBounds(bounds, { padding: [50, 50] });
+          } else if (currentLocation) {
+            map.setView([currentLocation.lat, currentLocation.lng], 12);
+          }
+        }}
       >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <LayerSwitcherControl />
 
         {locations.map((loc) => (
           <Marker key={loc.id} position={[loc.lat, loc.lng]}>
@@ -189,11 +267,16 @@ function MapPage() {
           </Marker>
         ))}
 
-        {flyTo && <FlyToLocation lat={flyTo.lat} lng={flyTo.lng} />}
+        {currentLocation && (
+          <Marker position={[currentLocation.lat, currentLocation.lng]}>
+            <Popup>📍Your Location</Popup>
+          </Marker>
+        )}
 
-        {/* ✅ Controls inside map */}
+        {flyTo && <FlyToLocation lat={flyTo.lat} lng={flyTo.lng} />}
         <LocationListControl locations={locations} onLocate={setFlyTo} />
         <AddLocationControl onAdd={(form) => dispatch(addLocation(form))} />
+        <LocateMeControl onLocate={setFlyTo} />
       </MapContainer>
     </div>
   );

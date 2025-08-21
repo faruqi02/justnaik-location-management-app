@@ -1,45 +1,51 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import API from "../utils/axios"; // use centralized axios
 
-const API_URL = "http://localhost:4000/auth";
+const API_URL = "/auth"; // baseURL already in axios.js
 
-// ✅ Register User
+// Register User
 export const registerUser = createAsyncThunk(
   "auth/registerUser",
   async ({ fullName, email, password }, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`${API_URL}/register`, { fullName, email, password });
+      const res = await API.post(`${API_URL}/register`, { fullName, email, password });
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
       return res.data;
     } catch (err) {
-      return rejectWithValue(err.response.data.message || "Register failed");
+      return rejectWithValue(err.response?.data?.message || "Register failed");
     }
   }
 );
 
-// ✅ Login User
+// Login User
 export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`${API_URL}/login`, { email, password });
+      const res = await API.post(`${API_URL}/login`, { email, password });
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
       return res.data;
     } catch (err) {
-      return rejectWithValue(err.response.data.message || "Login failed");
+      return rejectWithValue(err.response?.data?.message || "Login failed");
     }
   }
 );
 
-// ✅ Logout User
-export const logoutUser = createAsyncThunk("auth/logoutUser", async () => {
+// Logout User
+export const logoutUser = createAsyncThunk("auth/logoutUser", async (_, { rejectWithValue }) => {
+  try {
+    await API.post("/auth/logout");  // ✅ call backend
+  } catch (err) {
+    console.error("Logout API failed", err);
+    // we still want to clear local data even if API fails
+  }
   localStorage.removeItem("token");
   localStorage.removeItem("user");
   return null;
 });
 
-
-// ✅ Slice
 const authSlice = createSlice({
   name: "auth",
   initialState: {
@@ -47,11 +53,18 @@ const authSlice = createSlice({
     token: localStorage.getItem("token") || null,
     loading: false,
     error: null,
+    sessionExpired: false, // ✅ add
   },
-  reducers: {},
+  reducers: {
+    setSessionExpired: (state) => {
+      state.sessionExpired = true;
+    },
+    clearSessionExpired: (state) => {
+      state.sessionExpired = false;
+    },
+  },
   extraReducers: (builder) => {
     builder
-      // Register
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -65,7 +78,6 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Login
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -79,7 +91,6 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Logout
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
         state.token = null;
@@ -87,4 +98,5 @@ const authSlice = createSlice({
   },
 });
 
+export const { setSessionExpired, clearSessionExpired } = authSlice.actions;
 export default authSlice.reducer;

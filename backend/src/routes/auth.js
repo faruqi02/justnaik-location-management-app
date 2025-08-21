@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import pool from "../db.js";
+import { authRequired } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -14,12 +15,11 @@ router.post("/register", async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
     const [result] = await pool.query(
-      "INSERT INTO users(full_name, email, password_hash) VALUES (?,?,?)",
-      [fullName, email, hashed]
+      "INSERT INTO users(full_name, email, password_hash, login_status, ip_address) VALUES (?,?,?,?,?)",
+      [fullName, email, hashed, "offline", null]
     );
 
-    const token = jwt.sign({ id: result.insertId, email }, process.env.JWT_SECRET, { expiresIn: "1d" });
-    res.json({ token, user: { id: result.insertId, fullName, email } });
+    res.json({ message: "User registered successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -36,6 +36,13 @@ router.post("/login", async (req, res) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ message: "Invalid credentials" });
 
+    // ✅ Update login status & IP
+    const ipAddress = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+    await pool.query("UPDATE users SET login_status='online', ip_address=? WHERE id=?", [
+      ipAddress,
+      user.id,
+    ]);
+
     const token = jwt.sign({ id: user.id, email }, process.env.JWT_SECRET, { expiresIn: "1d" });
     res.json({ token, user: { id: user.id, fullName: user.full_name, email } });
   } catch (err) {
@@ -43,9 +50,17 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Logout (frontend deletes token client-side)
-router.post("/logout", (req, res) => {
-  res.json({ message: "Logged out" });
+// Logout
+router.post("/logout", authRequired, async (req, res) => {
+  try {
+    await pool.query("UPDATE users SET login_status='offline', ip_address=NULL WHERE id=?", [
+      req.user.id,
+    ]);
+    res.json({ message: "Logged out" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
+
 
 export default router;

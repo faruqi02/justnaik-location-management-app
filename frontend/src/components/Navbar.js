@@ -1,52 +1,73 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { logoutUser } from "../store/authSlice";
+import { logoutUser, clearSessionExpired } from "../store/authSlice";
 import { useNavigate } from "react-router-dom";
 
 function Navbar({ toggleSidebar }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, token } = useSelector((state) => state.auth);
+  const { user, token, sessionExpired } = useSelector((state) => state.auth);
 
   const handleLogout = () => {
     dispatch(logoutUser());
     navigate("/login");
   };
 
-  //if (!token) return null;
+  // ✅ Auto-hide session expired alert after 5s
+  useEffect(() => {
+    if (sessionExpired) {
+      const timer = setTimeout(() => {
+        dispatch(clearSessionExpired());
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [sessionExpired, dispatch]);
 
   return (
-    <nav className="navbar navbar-light bg-white border-bottom px-4">
-      <div className="container-fluid d-flex justify-content-between align-items-center">
-        {/* Unicode Hamburger ☰ */}
-        <button
-          className="btn btn-light"
-          onClick={toggleSidebar}
-          style={{ fontSize: "1.5rem" }}
+    <>
+      {sessionExpired && (
+        <div
+          className="alert alert-danger text-center mb-0 d-flex justify-content-between align-items-center"
+          role="alert"
         >
-          ☰
-        </button>
-
-        {/* Center: Brand (always centered) */}
-        <div className="flex-grow-1 d-flex justify-content-center">
-          <span className="navbar-brand mb-0 h1">
-            Location Management System
-          </span>
+          <span>⚠️ Session expired. Please log in again.</span>
+          <button
+            type="button"
+            className="btn-close ms-2"
+            onClick={() => dispatch(clearSessionExpired())}
+            aria-label="Close"
+          ></button>
         </div>
+      )}
 
-        {token && (
-          <div>
-            <span className="me-3">Welcome, {user?.fullName || "User"}</span>
-            <button
-              className="btn btn-outline-danger btn-sm"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
-          </div>
-        )}
-      </div>
-    </nav>
+      <nav className="navbar navbar-light bg-white border-bottom px-4">
+        <div className="container-fluid d-flex justify-content-between align-items-center">
+          {/* Hamburger button */}
+          <button
+            className="btn btn-light"
+            onClick={toggleSidebar}
+            style={{ fontSize: "1.5rem" }}
+          >
+            ☰
+          </button>
+
+          {/* Always centered */}
+          <span className="navbar-brand mx-auto">Location Management System</span>
+
+          {token && (
+            <div>
+              <span className="me-3">Welcome, {user?.fullName || "User"}</span>
+              <button
+                className="btn btn-outline-danger btn-sm"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+      </nav>
+    </>
   );
 }
 

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { db } from "../db.js";
+import pool from "../db.js";
 
 const router = Router();
 
@@ -9,11 +9,11 @@ const router = Router();
 router.post("/register", async (req, res) => {
   const { fullName, email, password } = req.body;
   try {
-    const [rows] = await db.query("SELECT id FROM users WHERE email=?", [email]);
+    const [rows] = await pool.query("SELECT id FROM users WHERE email=?", [email]);
     if (rows.length > 0) return res.status(400).json({ message: "Email already exists" });
 
     const hashed = await bcrypt.hash(password, 10);
-    const [result] = await db.query(
+    const [result] = await pool.query(
       "INSERT INTO users(full_name, email, password_hash) VALUES (?,?,?)",
       [fullName, email, hashed]
     );
@@ -29,7 +29,7 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE email=?", [email]);
+    const [rows] = await pool.query("SELECT * FROM users WHERE email=?", [email]);
     if (rows.length === 0) return res.status(400).json({ message: "User not found" });
 
     const user = rows[0];
